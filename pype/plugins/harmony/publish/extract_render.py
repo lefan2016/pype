@@ -72,19 +72,27 @@ class ExtractRender(pyblish.api.InstancePlugin):
         self.log.info(output.decode("utf-8"))
 
         # Collect rendered files.
+        self.log.debug(path)
         files = os.listdir(path)
+        self.log.debug(files)
         collections, remainder = clique.assemble(files, minimum_items=1)
         assert not remainder, (
             "There should not be a remainder for {0}: {1}".format(
                 instance[0], remainder
             )
         )
-        assert len(collections) == 1, (
-            "There should only be one image sequence in {}. Found: {}".format(
-                path, len(collections)
-            )
-        )
-        collection = collections[0]
+        self.log.debug(collections)
+        if len(collections) > 1:
+            for col in collections:
+                if len(list(col)) > 1:
+                     collection = col
+        else:
+            # assert len(collections) == 1, (
+            #     "There should only be one image sequence in {}. Found: {}".format(
+            #         path, len(collections)
+            #     )
+            # )
+            collection = collections[0]
 
         # Generate thumbnail.
         thumbnail_path = os.path.join(path, "thumbnail.png")
@@ -111,13 +119,22 @@ class ExtractRender(pyblish.api.InstancePlugin):
 
         # Generate mov.
         mov_path = os.path.join(path, instance.data["name"] + ".mov")
-        args = [
-            "ffmpeg", "-y",
-            "-i", audio_path,
-            "-i",
-            os.path.join(path, collection.head + "%04d" + collection.tail),
-            mov_path
-        ]
+        if os.path.isfile(audio_path):
+            args = [
+                "ffmpeg", "-y",
+                "-i", audio_path,
+                "-i",
+                os.path.join(path, collection.head + "%04d" + collection.tail),
+                mov_path
+            ]
+        else:
+            args = [
+                "ffmpeg", "-y",
+                "-i",
+                os.path.join(path, collection.head + "%04d" + collection.tail),
+                mov_path
+            ]
+
         process = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
